@@ -82,8 +82,22 @@ extension _VideoPlayerErrorMethods on VideoPlayerScreenState {
           unawaited(_handleBackButton());
           return;
         }
+        if (_vexRetryAsTranscode()) return;
         _presentPlaybackFailure(message);
     }
+  }
+
+  /// Vex fork: a Jellyfin direct play the device failed to decode is reopened
+  /// once as a server transcode, from the playhead.
+  bool _vexRetryAsTranscode() {
+    final request = _retryRequestForFailure();
+    if (request == null || player == null || _isTranscoding || _isOfflinePlayback) return false;
+    if (!VexPrefs.autoCompatibleEnabled || !request.qualityPreset.isOriginal) return false;
+    if (request.metadata.backend == MediaBackend.plex) return false;
+    if (!VexForcedTranscode.mark(request.metadata.id)) return false;
+    appLogger.w('Vex: direct play failed; retrying ${request.metadata.id} as a server transcode');
+    unawaited(_reopenAfterFailure(request));
+    return true;
   }
 
   /// A terminal player error: the attempt is no longer current, progress

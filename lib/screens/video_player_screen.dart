@@ -135,6 +135,7 @@ import '../watch_together/models/watch_copy.dart';
 import '../watch_together/services/player_adapter.dart';
 import '../utils/error_message_utils.dart';
 
+import '../vex/vex_playback.dart';
 part 'video_player/parts/companion_remote.dart';
 part 'video_player/parts/display_matching.dart';
 part 'video_player/parts/episode_navigation.dart';
