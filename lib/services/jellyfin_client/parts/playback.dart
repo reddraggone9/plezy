@@ -26,7 +26,7 @@ String _jellyfinDirectPlayVideoCodecs() {
     if (VideoDecodeCapabilities.accepts(RankedVideoCodec.av1)) 'av1',
     'mpeg4',
     'mpeg2video',
-  ].join(',');
+  ].where(vexAllowsDirectPlayCodec).join(',');
 }
 
 /// Video codecs the client accepts as a transcode output, best first — unlike
@@ -292,6 +292,10 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
     final preset = options.qualityPreset;
     final audioPreset = options.audioQualityPreset ?? AudioQualityPreset.original;
     final wantsOriginal = isTrack ? audioPreset.isOriginal : preset.isOriginal;
+    // Vex fork: Original plays as "Auto (device-compatible)" - the server's transcode is used
+    // when it says the hardware cannot decode the file, and a failed direct play forces one.
+    final vexAuto = !isTrack && wantsOriginal && VexPrefs.autoCompatibleEnabled;
+    final vexForced = vexAuto && VexForcedTranscode.isForced(metadata.id);
     final requestedAudioStreamId = options.selectedAudioStreamId == null
         ? options.preferredAudioTrack == null
               ? null
@@ -325,13 +329,13 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
               CodecUtils.isTextSubtitleCodec(track.codec),
         );
     final int? maxStreamingBitrate = wantsOriginal
-        ? null
+        ? (vexAuto ? vexUnlimitedBitrate : null)
         : isTrack
         // Non-original audio presets always carry a bitrate by construction.
         ? audioPreset.bitrateKbps! * 1000
         : (preset.videoBitrateKbps ?? 100_000) * 1000;
     final resumeOffsetMs = metadata.viewOffsetMs;
-    final int? transcodeStartTimeTicks = !wantsOriginal && resumeOffsetMs != null && resumeOffsetMs > 0
+    final int? transcodeStartTimeTicks = (!wantsOriginal || vexForced) && resumeOffsetMs != null && resumeOffsetMs > 0
         ? msToJellyfinTicks(resumeOffsetMs)
         : null;
     Map<String, dynamic>? negotiation;
@@ -349,9 +353,25 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
         // burns the selected embedded stream in rather than serving it as a file the client
         // would fetch as well. A selected external *file* keeps `External`, so it is still
         // delivered as a file - the one case where the client genuinely holds it.
-        burnSubtitles: !wantsOriginal && !requestedSubtitleIsExternalFile,
+        burnSubtitles: (!wantsOriginal || vexForced) && !requestedSubtitleIsExternalFile,
+        enableDirectPlay: vexForced ? false : null,
+        enableDirectStream: vexForced ? false : null,
       );
       chosenSource = _selectNegotiatedMediaSource(negotiation['MediaSources'], bundle.selectedSourceId);
+      if (vexAuto && !vexForced && chosenSource != null && chosenSource['SupportsDirectPlay'] != true) {
+        // The hardware cannot take the original: negotiate the transcode the way a capped preset
+        // does, from the resume point and with the selected embedded subtitle burned in.
+        negotiation = await getPlaybackInfo(
+          metadata.id,
+          maxStreamingBitrate: maxStreamingBitrate,
+          mediaSourceId: bundle.selectedSourceId,
+          startTimeTicks: resumeOffsetMs != null && resumeOffsetMs > 0 ? msToJellyfinTicks(resumeOffsetMs) : null,
+          audioStreamIndex: requestedAudioStreamId,
+          subtitleStreamIndex: requestedSubtitleStreamId,
+          burnSubtitles: !requestedSubtitleIsExternalFile,
+        );
+        chosenSource = _selectNegotiatedMediaSource(negotiation['MediaSources'], bundle.selectedSourceId);
+      }
     } catch (error, stackTrace) {
       if (!_canUseJellyfinStaticStreamFallback(error)) {
         Error.throwWithStackTrace(classifyPlaybackFailure(error), stackTrace);
@@ -381,7 +401,8 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
       }
 
       final transcodingUrl = chosenSource['TranscodingUrl'];
-      if (!wantsOriginal && transcodingUrl is String && transcodingUrl.isNotEmpty) {
+      final vexUseTranscode = vexAuto && chosenSource['SupportsDirectPlay'] != true;
+      if ((!wantsOriginal || vexUseTranscode) && transcodingUrl is String && transcodingUrl.isNotEmpty) {
         // TranscodingUrl is server-relative and already encodes container,
         // codecs, MediaSourceId, and PlaySessionId; we just append the
         // dialect's token query parameter for auth.
@@ -911,7 +932,7 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
         'DeviceProfile': <String, Object?>{
           'Name': 'Plezy',
           'MaxStreamingBitrate': ?maxStreamingBitrate,
-          'CodecProfiles': const <Map<String, Object?>>[],
+          'CodecProfiles': audioProfile ? const <Map<String, Object?>>[] : vexJellyfinCodecProfiles(),
           // fMP4 segments instead of MPEG-TS (#2131): ts cannot carry AV1,
           // so a server with an AV1 hardware encoder could never pick it.
           // Every mpv backend already consumes fMP4 HLS — the Plex VOD

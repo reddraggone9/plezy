@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../../vex/vex_playback.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
@@ -73,6 +74,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                 if (PlatformDetector.supportsExternalPlayers()) _externalPlayerTile(),
                 if (!exoActive) _mpvConfigTile(),
                 _hardwareDecodingTile(),
+                _vexAutoCompatibleTile(),
                 if (exoActive) _playbackBufferTile(),
                 if (exoActive) _tunneledPlaybackTile(),
                 if (PlatformDetector.supportsPictureInPicture()) _autoPipTile(),
@@ -452,6 +454,15 @@ class PlaybackSettingsScreen extends StatelessWidget {
     icon: Symbols.hardware_rounded,
     title: t.settings.hardwareDecoding,
     subtitle: t.settings.hardwareDecodingDescription,
+  );
+
+  // Vex fork setting; English only to keep the fork off upstream's i18n files.
+  Widget _vexAutoCompatibleTile() => const SettingSwitchTile(
+    pref: VexPrefs.autoCompatible,
+    icon: Symbols.auto_awesome_rounded,
+    title: 'Auto device-compatible Original (Jellyfin)',
+    subtitle:
+        'Original plays the file when the hardware decoder and screen can handle it, otherwise a server transcode',
   );
 
   Widget _autoPipTile() => SettingSwitchTile(

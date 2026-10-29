@@ -37,6 +37,7 @@ import '../media/media_server_client.dart';
 import '../media/playback_report_metadata.dart';
 import '../media/server_capabilities.dart';
 import '../models/audio_quality_preset.dart';
+import '../vex/vex_playback.dart';
 import '../models/jellyfin/jellyfin_account_preferences.dart';
 import '../models/jellyfin/jellyfin_display_preferences.dart';
 import '../models/livetv_capture_buffer.dart';
