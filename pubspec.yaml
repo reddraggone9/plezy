@@ -76,8 +76,9 @@ dependencies:
   # bypass.
   background_downloader:
     git:
-      url: https://github.com/edde746/background_downloader
-      ref: afa3fe68080327cfa87e725a38961bf5d2e35307
+      # Vex fork: upstream's pin + foreground non-resumable (transcoded) downloads (vex/foreground).
+      url: https://github.com/reddraggone9/background_downloader
+      ref: 22ee800435e29d2a359518208059ac9cd7a4a19f
   sentry_flutter: ^9.30.0
   auto_updater:
     git:
