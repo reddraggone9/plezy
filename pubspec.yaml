@@ -74,8 +74,9 @@ dependencies:
   # same-filesystem move/resume cleanup; no per-host TLS bypass.
   background_downloader:
     git:
-      url: https://github.com/edde746/background_downloader
-      ref: 7c341be73df8a6a5ddccb06124807ac250a32bc1
+      # Vex fork: upstream's pin + foreground non-resumable (transcoded) downloads (vex/foreground).
+      url: https://github.com/reddraggone9/background_downloader
+      ref: 2cb8345c97bea131d4c0f4091ee46d15cb5d259d
   sentry_flutter: ^9.30.0
   auto_updater:
     git:

@@ -105,9 +105,9 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "7c341be73df8a6a5ddccb06124807ac250a32bc1"
-      resolved-ref: "7c341be73df8a6a5ddccb06124807ac250a32bc1"
-      url: "https://github.com/edde746/background_downloader"
+      ref: "2cb8345c97bea131d4c0f4091ee46d15cb5d259d"
+      resolved-ref: "2cb8345c97bea131d4c0f4091ee46d15cb5d259d"
+      url: "https://github.com/reddraggone9/background_downloader"
     source: git
     version: "9.6.2"
   boolean_selector:
