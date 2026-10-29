@@ -3,6 +3,21 @@
   Plezy
 </h1>
 
+> [!NOTE]
+> ## Plezy Vex fork
+>
+> This is an unofficial fork of [Plezy](https://github.com/edde746/plezy), maintained for Amazon Fire HD 10 tablets (and other Android devices whose hardware decoders can't play everything in a Jellyfin library). It is **vibe-coded by Claude Opus 5.5** and rebased onto each upstream release. Report problems with these changes here, not upstream.
+>
+> **What it changes (Android, Jellyfin):**
+> - **Automatic device-compatible playback.** "Original" quality plays the original file when the device's *hardware* decoder can handle it (codec, resolution, frame rate, bit depth, HDR vs. the screen). Otherwise it plays a server transcode (HEVC/H.264, sized to the screen, tone-mapped on SDR screens) with no bitrate cap. It uses Android's MediaCodec capabilities and sends them to Jellyfin as `CodecProfiles`. You can turn this off under Settings → Playback.
+> - **Screen-size cap.** Transcodes never exceed the display resolution.
+> - **Retry as transcode.** If a direct play still fails to decode, it reopens once as a server transcode at the same position.
+> - Installs alongside stock Plezy (`com.edde746.plezy.vex`, "Plezy Vex"), and has its own signing key.
+>
+> **Install/update:** download `plezy-vex-<version>-arm64-v8a.apk` from [Releases](https://github.com/reddraggone9/plezy/releases), or add this repo to [Obtainium](https://github.com/ImranR98/Obtainium) with the APK filter `plezy-vex-.*arm64-v8a\.apk`. Fire OS asks you to confirm each update. The in-app update check is disabled; updates come from this fork's releases.
+>
+> Licensed GPL-3.0 like upstream. All credit for Plezy goes to edde746 and its contributors.
+
 A modern client for Plex, Jellyfin, and Emby on desktop, mobile, and TV. Built with Flutter for native performance and a clean interface.
 
 <p>
