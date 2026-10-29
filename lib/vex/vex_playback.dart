@@ -30,6 +30,32 @@ abstract final class VexPrefs {
   /// Original keeps upstream's behaviour.
   static bool get autoCompatibleEnabled =>
       VexDeviceLimits.current != null && (SettingsService.instanceOrNull?.read(autoCompatible) ?? true);
+
+  /// Downloads: keep the original when the hardware can play it, otherwise
+  /// download a server transcode sized for this device ("Auto").
+  static const downloadAutoCompatible = BoolPref('vex_download_auto_compatible', defaultValue: true);
+
+  static bool get downloadAutoCompatibleEnabled =>
+      VexDeviceLimits.current != null && (SettingsService.instanceOrNull?.read(downloadAutoCompatible) ?? true);
+}
+
+/// Bitrate cap for a device-compatible download transcode (1080p H.264/HEVC).
+const vexDownloadBitrate = 8000000;
+
+/// Progressive MP4 transcode used for device-compatible downloads: a single
+/// file the downloader can fetch, H.264 first because every Android device
+/// plays it; HEVC only when the hardware decodes it.
+Map<String, Object?> vexDownloadTranscodingProfile([VexDeviceLimits? limits]) {
+  limits ??= VexDeviceLimits.current;
+  return {
+    'Type': 'Video',
+    'Container': 'mp4',
+    'Protocol': 'http',
+    'Context': 'Streaming',
+    'VideoCodec': ['h264', if (limits?.codecs.containsKey('hevc') ?? false) 'hevc'].join(','),
+    'AudioCodec': 'aac,mp3,ac3,eac3',
+    'MaxAudioChannels': '6',
+  };
 }
 
 /// One hardware decoder's limits, as reported by `DecoderLimits.kt`.

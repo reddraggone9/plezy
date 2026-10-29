@@ -3,5 +3,6 @@ Plezy Vex fork: an unofficial Plezy build for Android (Fire HD 10 and similar), 
 - Jellyfin "Original" quality automatically uses a server transcode when the hardware decoder or screen can't handle the file. Otherwise it direct-plays.
 - Transcodes are capped to the screen resolution and tone-mapped on SDR screens.
 - A failed direct play retries once as a transcode.
+- Downloads: a file the device can't play downloads as a 1080p MP4 transcode (Settings → Downloads → Device-compatible downloads). This also applies to Keep Synced rules.
 
 Install `plezy-vex-*-arm64-v8a.apk` (Fire HD 10, most phones) or via Obtainium. Installs alongside stock Plezy.

@@ -48,7 +48,15 @@ mixin _JellyfinImageDownloadMethods on _JellyfinClientInternals {
 
     // Direct-stream the selected original file. Jellyfin's `Static=true`
     // skips the transcoder so the byte-for-byte source lands on disk.
-    final videoUrl = buildDirectStreamUrl(item.id, container: bundle?.container, mediaSourceId: bundle?.pinnedSourceId);
+    final staticUrl = buildDirectStreamUrl(
+      item.id,
+      container: bundle?.container,
+      mediaSourceId: bundle?.pinnedSourceId,
+    );
+    // Vex fork: a server transcode when the hardware cannot play the original.
+    final vexTranscodeUrl = await _vexDeviceCompatibleDownloadUrl(item.id, selectedSourceId);
+    final videoUrl = vexTranscodeUrl ?? staticUrl;
+    final vexTranscoded = vexTranscodeUrl != null;
 
     // External subtitle sidecars are listed in the per-source MediaStreams.
     // PlaybackInfo gives us the canonical view including DeliveryUrl when
@@ -66,31 +74,52 @@ mixin _JellyfinImageDownloadMethods on _JellyfinClientInternals {
         error: error,
         stackTrace: stackTrace,
       );
-      return DownloadResolution(videoUrl: videoUrl, mediaSourceId: selectedSourceId, externalSubtitlesResolved: false);
+      return DownloadResolution(
+        videoUrl: videoUrl,
+        mediaSourceId: selectedSourceId,
+        externalSubtitlesResolved: false,
+        vexTranscoded: vexTranscoded,
+      );
     }
 
     final source = _selectDownloadMediaSource(playbackInfo['MediaSources'] as List, selectedSourceId, mediaIndex);
     if (source == null) {
       appLogger.w('Jellyfin download subtitle enrichment returned no usable source; using the static stream');
-      return DownloadResolution(videoUrl: videoUrl, mediaSourceId: selectedSourceId, externalSubtitlesResolved: false);
+      return DownloadResolution(
+        videoUrl: videoUrl,
+        mediaSourceId: selectedSourceId,
+        externalSubtitlesResolved: false,
+        vexTranscoded: vexTranscoded,
+      );
     }
     if (source['MediaStreams'] is! List) {
       appLogger.w('Jellyfin download subtitle enrichment returned malformed streams; using the static stream');
-      return DownloadResolution(videoUrl: videoUrl, mediaSourceId: selectedSourceId, externalSubtitlesResolved: false);
+      return DownloadResolution(
+        videoUrl: videoUrl,
+        mediaSourceId: selectedSourceId,
+        externalSubtitlesResolved: false,
+        vexTranscoded: vexTranscoded,
+      );
     }
 
     final streams = source['MediaStreams'] as List;
     final rawMediaSourceId = source['Id'];
     if (rawMediaSourceId != null && rawMediaSourceId is! String) {
       appLogger.w('Jellyfin download subtitle enrichment returned an invalid source id; using the static stream');
-      return DownloadResolution(videoUrl: videoUrl, mediaSourceId: selectedSourceId, externalSubtitlesResolved: false);
+      return DownloadResolution(
+        videoUrl: videoUrl,
+        mediaSourceId: selectedSourceId,
+        externalSubtitlesResolved: false,
+        vexTranscoded: vexTranscoded,
+      );
     }
     final subtitleMediaSourceId = rawMediaSourceId as String? ?? item.id;
     for (final raw in streams) {
       if (raw is! Map<String, dynamic>) continue;
       if (raw['Type'] != 'Subtitle') continue;
       final fields = parseJellyfinStreamFields(raw);
-      if (!fields.isExternalFile) continue;
+      // Vex fork: a transcoded MP4 drops embedded text subtitles, so fetch those as files too.
+      if (!fields.isExternalFile && !(vexTranscoded && CodecUtils.isTextSubtitleCodec(fields.codec))) continue;
       final index = raw['Index'];
       if (index is! int) continue;
       final codec = fields.codec?.toLowerCase();
@@ -114,7 +143,54 @@ mixin _JellyfinImageDownloadMethods on _JellyfinClientInternals {
       );
     }
 
-    return DownloadResolution(videoUrl: videoUrl, mediaSourceId: selectedSourceId, externalSubtitles: subtitles);
+    return DownloadResolution(
+      videoUrl: videoUrl,
+      mediaSourceId: selectedSourceId,
+      externalSubtitles: subtitles,
+      vexTranscoded: vexTranscoded,
+    );
+  }
+
+  /// Vex fork: the progressive MP4 transcode URL for [itemId] when the device
+  /// cannot hardware-decode the selected source, or null to keep the original.
+  /// Decided with no bitrate cap (the original is kept whenever it plays), then
+  /// re-negotiated at [vexDownloadBitrate] for the file actually downloaded.
+  Future<String?> _vexDeviceCompatibleDownloadUrl(String itemId, String? sourceId) async {
+    if (!VexPrefs.downloadAutoCompatibleEnabled) return null;
+    try {
+      Map<String, dynamic>? pick(Map<String, dynamic> info) =>
+          _selectDownloadMediaSource(info['MediaSources'] as List? ?? const [], sourceId, 0);
+      final decision = pick(
+        await getPlaybackInfo(
+          itemId,
+          mediaSourceId: sourceId,
+          maxStreamingBitrate: vexUnlimitedBitrate,
+          vexTranscodingProfile: vexDownloadTranscodingProfile(),
+        ),
+      );
+      if (decision == null || decision['SupportsDirectPlay'] == true) return null;
+      final transcode = pick(
+        await getPlaybackInfo(
+          itemId,
+          mediaSourceId: sourceId,
+          maxStreamingBitrate: vexDownloadBitrate,
+          enableDirectPlay: false,
+          enableDirectStream: false,
+          vexTranscodingProfile: vexDownloadTranscodingProfile(),
+        ),
+      );
+      final url = transcode?['TranscodingUrl'];
+      if (url is! String || url.isEmpty) return null;
+      appLogger.i('Vex: downloading $itemId as a device-compatible transcode');
+      return _withApiKey(url);
+    } catch (error, stackTrace) {
+      appLogger.w(
+        'Vex: device-compatible download negotiation failed; downloading the original',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
   }
 
   Map<String, dynamic>? _selectDownloadMediaSource(List<dynamic> sources, String? selectedSourceId, int mediaIndex) {
