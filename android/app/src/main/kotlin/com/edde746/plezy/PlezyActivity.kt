@@ -882,6 +882,9 @@ class PlezyActivity : FlutterActivity() {
         "getPerformanceSignals" -> result.success(getPerformanceSignals())
         "getVideoDecodeCapabilities" -> result.success(MediaCodecQuery.hardwareVideoDecodeSupport())
         "vexGetDecoderLimits" -> result.success(com.edde746.plezy.vex.DecoderLimits.probe(this))
+        "vexIsActiveNetworkMetered" -> result.success(
+          (getSystemService(CONNECTIVITY_SERVICE) as android.net.ConnectivityManager).isActiveNetworkMetered
+        )
         "getBackgroundWorkSignals" -> result.success(
           BackgroundWorkClassifier.toMap(BackgroundWorkDiagnostics.read(this))
         )

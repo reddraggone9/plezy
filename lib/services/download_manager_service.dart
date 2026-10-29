@@ -40,6 +40,7 @@ import '../utils/global_key_utils.dart';
 import '../utils/error_message_utils.dart';
 import '../utils/storage_failure.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import '../vex/vex_playback.dart';
 
 typedef MediaClientResolver = MediaServerClient? Function(ServerId serverId, {String? clientScopeId});
 typedef _NativeTaskForId = Future<Task?> Function(String taskId);
@@ -270,7 +271,7 @@ class DownloadManagerService {
   static Future<bool> shouldBlockDownloadOnCellularWith(List<ConnectivityResult> connectivity) async {
     // The link decides first: an empty or unknown snapshot is not
     // cellular-only, so the preference is only consulted when it can matter.
-    if (!connectivity.isCellularOnly) return false;
+    if (!connectivity.isCellularOnly && !await vexActiveNetworkMetered()) return false; // Vex: metered Wi-Fi too
     final settings = await SettingsService.getInstance();
     return settings.read(SettingsService.downloadOnWifiOnly);
   }

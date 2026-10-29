@@ -720,7 +720,7 @@ class SettingsService extends BaseSharedPreferencesService {
   static const introPattern = StringPref('intro_pattern', defaultValue: defaultIntroPattern);
   static const creditsPattern = StringPref('credits_pattern', defaultValue: defaultCreditsPattern);
   static const customDownloadPathType = NullableStringPref('custom_download_path_type');
-  static const downloadOnWifiOnly = BoolPref('download_on_wifi_only');
+  static const downloadOnWifiOnly = BoolPref('download_on_wifi_only', defaultValue: true); // Vex: unmetered by default
   static const autoRemoveWatchedDownloads = BoolPref('auto_remove_watched_downloads');
 
   /// Set once the user has seen the pre-flight "background downloads are

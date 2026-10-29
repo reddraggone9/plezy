@@ -12,6 +12,7 @@
 > - **Automatic device-compatible playback.** "Original" quality plays the original file when the device's *hardware* decoder can handle it (codec, resolution, frame rate, bit depth, HDR vs. the screen). Otherwise it plays a server transcode (HEVC/H.264, sized to the screen, tone-mapped on SDR screens) with no bitrate cap. It uses Android's MediaCodec capabilities and sends them to Jellyfin as `CodecProfiles`. You can turn this off under Settings → Playback.
 > - **Screen-size cap.** Transcodes never exceed the display resolution.
 > - **Device-compatible downloads.** A file the hardware can't play downloads as a 1080p-capped MP4 transcode (about 8 Mbps), including through Keep Synced rules. Files it can play still download as originals. You can turn this off under Settings → Downloads.
+> - **Unmetered-only downloads by default.** The "Wi-Fi only" download setting now means *unmetered*: a phone hotspot is metered Wi-Fi and doesn't count. It's on by default. (Uses a one-line patch to `background_downloader`: [reddraggone9/background_downloader@vex/unmetered](https://github.com/reddraggone9/background_downloader/tree/vex/unmetered).)
 > - **Retry as transcode.** If a direct play still fails to decode, it reopens once as a server transcode at the same position.
 > - Installs alongside stock Plezy (`com.edde746.plezy.vex`, "Plezy Vex"), and has its own signing key.
 >

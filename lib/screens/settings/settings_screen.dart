@@ -445,8 +445,9 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           focusNode: _focusTracker.get(_kDownloadOnWifiOnly),
           pref: settings.SettingsService.downloadOnWifiOnly,
           icon: Symbols.wifi_rounded,
-          title: t.settings.downloadOnWifiOnly,
-          subtitle: t.settings.downloadOnWifiOnlyDescription,
+          // Vex fork: the setting means unmetered (a phone hotspot is metered Wi-Fi).
+          title: 'Download on unmetered networks only',
+          subtitle: 'Wait for Wi-Fi or Ethernet that is not metered, such as a phone hotspot',
         ),
         // Vex fork setting; English only to keep the fork off upstream's i18n files.
         if (VexDeviceLimits.current != null)

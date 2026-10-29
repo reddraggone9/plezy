@@ -74,8 +74,9 @@ dependencies:
   # same-filesystem move/resume cleanup; no per-host TLS bypass.
   background_downloader:
     git:
-      url: https://github.com/edde746/background_downloader
-      ref: 7c341be73df8a6a5ddccb06124807ac250a32bc1
+      # Vex fork: upstream's pin + "Wi-Fi only" means unmetered (vex/unmetered).
+      url: https://github.com/reddraggone9/background_downloader
+      ref: 6066b523bc8ea120a0cc666237a183490e5a0fe9
   sentry_flutter: ^9.30.0
   auto_updater:
     git:

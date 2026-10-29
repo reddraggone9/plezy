@@ -383,14 +383,17 @@ void main() {
     );
     addTearDown(() => harness.dispose(tester));
 
-    await tester.tap(find.text(t.settings.downloadOnWifiOnly));
-    await _pumpUi(tester);
+    // Vex fork: on (unmetered only) by default, under its own label.
+    const label = 'Download on unmetered networks only';
     expect(SettingsService.instance.read(SettingsService.downloadOnWifiOnly), isTrue);
+    await tester.tap(find.text(label));
+    await _pumpUi(tester);
+    expect(SettingsService.instance.read(SettingsService.downloadOnWifiOnly), isFalse);
 
-    await tester.tap(find.text(t.settings.downloadOnWifiOnly));
+    await tester.tap(find.text(label));
     await _pumpUi(tester);
 
-    expect(requirements, [RequireWiFi.forAllTasks, RequireWiFi.forNoTasks]);
+    expect(requirements, [RequireWiFi.forNoTasks, RequireWiFi.forAllTasks]);
   });
 
   testWidgets('importing Wi-Fi only applies it to downloads that are already queued', (tester) async {

@@ -225,6 +225,18 @@ List<Map<String, Object?>> buildVexJellyfinCodecProfiles(VexDeviceLimits limits)
   return profiles;
 }
 
+/// Whether Android reports the active network as metered (a phone hotspot,
+/// cellular). False where the platform does not answer.
+Future<bool> vexActiveNetworkMetered() async {
+  try {
+    return await deviceChannel.invokeMethod<bool>('vexIsActiveNetworkMetered') ?? false;
+  } on MissingPluginException {
+    return false;
+  } on PlatformException {
+    return false;
+  }
+}
+
 /// Items whose direct play failed this session: their next open asks the
 /// server for a transcode only.
 abstract final class VexForcedTranscode {
