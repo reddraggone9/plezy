@@ -170,6 +170,7 @@ mixin _JellyfinClientInternals on MediaServerCacheMixin {
     bool isLiveTv,
     bool audioProfile,
     bool burnSubtitles,
+    Map<String, Object?>? vexTranscodingProfile,
   });
   String _withApiKey(String urlOrPath);
 

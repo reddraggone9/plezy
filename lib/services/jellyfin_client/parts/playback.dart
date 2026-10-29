@@ -897,6 +897,9 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
     /// Drop `External` subtitle delivery from the profile, so the server burns
     /// the selected subtitle into a transcode instead of serving it alongside.
     bool burnSubtitles = false,
+
+    /// Vex fork: replace the transcoding profiles (device-compatible downloads).
+    Map<String, Object?>? vexTranscodingProfile,
   }) async {
     // The same negotiation fields go out stringified in the query string and
     // typed in the body.
@@ -938,7 +941,8 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
           // Every mpv backend already consumes fMP4 HLS — the Plex VOD
           // target has shipped it since issue #1859.
           'TranscodingProfiles': <Map<String, Object?>>[
-            if (!isLiveTv || !dialect.requiresMpegTsForLiveTv)
+            ?vexTranscodingProfile,
+            if (vexTranscodingProfile == null && (!isLiveTv || !dialect.requiresMpegTsForLiveTv))
               {
                 'Type': 'Video',
                 'Container': 'mp4',
@@ -968,13 +972,14 @@ mixin _JellyfinPlaybackMethods on _JellyfinClientInternals {
             // entry has been filtered out: VOD keeps negotiating fMP4
             // (jellyfin-web ships the same mp4-then-ts pair). flac and
             // truehd are omitted because TS cannot carry them.
-            {
-              'Type': 'Video',
-              'Container': 'ts',
-              'Protocol': 'hls',
-              'VideoCodec': _jellyfinTranscodeVideoCodecsTs(),
-              'AudioCodec': 'aac,mp3,ac3,eac3,opus,dts',
-            },
+            if (vexTranscodingProfile == null)
+              {
+                'Type': 'Video',
+                'Container': 'ts',
+                'Protocol': 'hls',
+                'VideoCodec': _jellyfinTranscodeVideoCodecsTs(),
+                'AudioCodec': 'aac,mp3,ac3,eac3,opus,dts',
+              },
             // Track playback transcode target: stereo mp3 over plain http.
             // Appended after the video profile so the first-entry-wins
             // ordering for video output codecs is untouched.

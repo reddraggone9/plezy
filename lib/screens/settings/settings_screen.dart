@@ -65,6 +65,7 @@ import 'settings_utils.dart';
 import 'supporter_settings_tile.dart';
 import 'tracker_service_info.dart';
 import '../../widgets/loading_indicator_box.dart';
+import '../../vex/vex_playback.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
@@ -447,6 +448,15 @@ class _SettingsScreenState extends State<SettingsScreen> with FocusableTab, Moun
           title: t.settings.downloadOnWifiOnly,
           subtitle: t.settings.downloadOnWifiOnlyDescription,
         ),
+        // Vex fork setting; English only to keep the fork off upstream's i18n files.
+        if (VexDeviceLimits.current != null)
+          const SettingSwitchTile(
+            pref: VexPrefs.downloadAutoCompatible,
+            icon: Symbols.auto_awesome_rounded,
+            title: 'Device-compatible downloads (Jellyfin)',
+            subtitle:
+                'Download a 1080p transcode when this device cannot hardware-decode the original; off keeps originals',
+          ),
         SettingSwitchTile(
           focusNode: _focusTracker.get(_kAutoRemoveWatchedDownloads),
           pref: settings.SettingsService.autoRemoveWatchedDownloads,
