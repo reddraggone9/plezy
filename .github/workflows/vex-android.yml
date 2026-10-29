@@ -1,0 +1,93 @@
+# Vex fork: build the signed Android APKs and publish them as a GitHub release.
+# Tag `<upstream>-vex.<n>` (e.g. 2.25.0-vex.1) and push it, or dispatch with a tag.
+name: Vex Android release
+
+on:
+  push:
+    tags: ["*-vex.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build (e.g. 2.25.0-vex.1)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: "3.47.1"
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: vex-${{ runner.os }}-${{ hashFiles('pubspec.lock', '**/*.gradle*', 'mpv-build.lock.json') }}
+
+      - name: Version
+        id: v
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          UPSTREAM_CODE=$(sed -n 's/^version: .*+\([0-9]*\)$/\1/p' pubspec.yaml)
+          REV="${TAG##*-vex.}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # Upstream build number * 100 + fork revision keeps versionCode increasing.
+          echo "code=$((UPSTREAM_CODE * 100 + REV))" >> "$GITHUB_OUTPUT"
+
+      - run: flutter pub get --enforce-lockfile --no-example
+
+      - name: Signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.VEX_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.VEX_KEYSTORE_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/vex-release.jks
+          cat > android/key.properties << EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEYSTORE_PASSWORD
+          keyAlias=plezy-vex
+          storeFile=vex-release.jks
+          EOF
+
+      - name: Build
+        run: >
+          flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
+          --build-name=${{ steps.v.outputs.tag }} --build-number=${{ steps.v.outputs.code }}
+          --dart-define=GIT_COMMIT=${{ github.sha }}
+
+      - name: Clean up signing
+        if: always()
+        run: rm -f android/app/vex-release.jks android/key.properties
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          out=build/app/outputs/flutter-apk
+          mv "$out/app-arm64-v8a-release.apk" "plezy-vex-$TAG-arm64-v8a.apk"
+          mv "$out/app-armeabi-v7a-release.apk" "plezy-vex-$TAG-armeabi-v7a.apk"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Plezy Vex $TAG" --notes-file VEX_RELEASE_NOTES.md
+          gh release upload "$TAG" --clobber plezy-vex-$TAG-*.apk
