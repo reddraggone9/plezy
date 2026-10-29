@@ -24,7 +24,10 @@ const _fire = VexDeviceLimits(
 );
 
 /// A server that offers a transcode and reports [directPlay] for the source.
-({JellyfinClient client, List<http.Request> playbackInfo}) _server({required bool directPlay}) {
+({JellyfinClient client, List<http.Request> playbackInfo}) _server({
+  required bool directPlay,
+  String transcodingUrl = '/videos/item-1/master.m3u8?MediaSourceId=src-1&PlaySessionId=ps-transcode',
+}) {
   final playbackInfo = <http.Request>[];
   final client = JellyfinClient.forTesting(
     connection: testJellyfinConnection(
@@ -59,9 +62,10 @@ const _fire = VexDeviceLimits(
             {
               'Id': 'src-1',
               'SupportsDirectPlay': directPlay,
-              'TranscodingUrl': '/videos/item-1/master.m3u8?MediaSourceId=src-1&PlaySessionId=ps-transcode',
+              'TranscodingUrl': transcodingUrl,
               'MediaStreams': [
                 {'Index': 0, 'Type': 'Video'},
+                {'Index': 2, 'Type': 'Subtitle', 'Codec': 'subrip', 'IsExternal': false, 'Language': 'eng'},
               ],
             },
           ],
@@ -132,5 +136,39 @@ void main() {
     expect(query['EnableDirectPlay'], 'false');
     expect(query['EnableDirectStream'], 'false');
     expect(query['StartTimeTicks'], '10000000');
+  });
+
+  group('downloads', () {
+    const mp4 = '/videos/item-1/stream.mp4?MediaSourceId=src-1&VideoCodec=h264';
+    final movie = testMediaItem(id: 'item-1', backend: MediaBackend.jellyfin, kind: MediaKind.movie, serverId: 'srv-1');
+
+    test('a source the hardware cannot play downloads as a capped MP4 transcode', () async {
+      final server = _server(directPlay: false, transcodingUrl: mp4);
+      addTearDown(server.client.close);
+
+      final resolution = await server.client.resolveDownload(movie);
+
+      expect(resolution.vexTranscoded, isTrue);
+      expect(Uri.parse(resolution.videoUrl!).path, '/videos/item-1/stream.mp4');
+      final bodies = [for (final r in server.playbackInfo) jsonDecode(r.body) as Map<String, dynamic>];
+      expect(bodies[0]['MaxStreamingBitrate'], vexUnlimitedBitrate);
+      expect(bodies[1]['MaxStreamingBitrate'], vexDownloadBitrate);
+      expect(bodies[1]['EnableDirectPlay'], isFalse);
+      final profiles = (bodies[1]['DeviceProfile'] as Map)['TranscodingProfiles'] as List;
+      expect(profiles.single, containsPair('Protocol', 'http'));
+      // The embedded text subtitle the MP4 drops is fetched as a file.
+      expect(resolution.externalSubtitles.map((s) => s.id), [2]);
+    });
+
+    test('a playable source downloads the original', () async {
+      final server = _server(directPlay: true, transcodingUrl: mp4);
+      addTearDown(server.client.close);
+
+      final resolution = await server.client.resolveDownload(movie);
+
+      expect(resolution.vexTranscoded, isFalse);
+      expect(Uri.parse(resolution.videoUrl!).path, '/Videos/item-1/stream');
+      expect(resolution.externalSubtitles, isEmpty);
+    });
   });
 }

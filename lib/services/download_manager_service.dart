@@ -2307,7 +2307,7 @@ class DownloadManagerService {
           updates: Updates.statusAndProgress,
           requiresWiFi: requiresWiFi,
           retries: _nativeRetries,
-          allowPause: true,
+          allowPause: !resolution.vexTranscoded,
           metaData: globalKey,
           displayName: displayName,
         );
@@ -2352,7 +2352,7 @@ class DownloadManagerService {
           updates: Updates.statusAndProgress,
           requiresWiFi: requiresWiFi,
           retries: _nativeRetries,
-          allowPause: true,
+          allowPause: !resolution.vexTranscoded,
           metaData: globalKey,
           displayName: displayName,
         );

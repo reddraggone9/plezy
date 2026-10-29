@@ -74,5 +74,10 @@ class DownloadResolution {
     this.externalSubtitles = const [],
     this.externalSubtitlesResolved = true,
     this.additionalParts = const [],
+    this.vexTranscoded = false,
   });
+
+  /// Vex fork: [videoUrl] is a live server transcode with no Content-Length,
+  /// so the transfer cannot pause/resume and restarts instead.
+  final bool vexTranscoded;
 }
