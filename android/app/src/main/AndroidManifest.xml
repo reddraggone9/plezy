@@ -572,6 +572,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Vex fork: foreground download work (non-resumable transcoded downloads). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
