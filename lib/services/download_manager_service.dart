@@ -213,6 +213,17 @@ class DownloadManagerService {
 
   // Prevents concurrent _processQueue calls
   bool _isProcessingQueue = false;
+  Completer<void>? _queueHandoff;
+
+  /// Wait until the current queue drain has handed its tasks to the native downloader.
+  Future<void> waitForQueueHandoff() => _queueHandoff?.future ?? Future<void>.value();
+
+  /// Headless callers also restart durable queued requests from an earlier run.
+  Future<void> handoffQueuedDownloads(MediaServerClient client) async {
+    await _processQueue(client);
+    await waitForQueueHandoff();
+  }
+
   // A _processQueue call landed while a drain was already running; the
   // running drain replays one more full pass before releasing the guard.
   bool _queueRerunRequested = false;
@@ -1884,6 +1895,7 @@ class DownloadManagerService {
       return;
     }
     _isProcessingQueue = true;
+    _queueHandoff = Completer<void>();
     _fallbackClient = client;
 
     try {
@@ -1925,6 +1937,8 @@ class DownloadManagerService {
     } finally {
       _isProcessingQueue = false;
       _queueRerunRequested = false;
+      _queueHandoff?.complete();
+      _queueHandoff = null;
     }
   }
 

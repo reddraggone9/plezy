@@ -1,3 +1,4 @@
+import 'vex/background_refill.dart';
 import 'dart:async';
 import 'dart:io' show Directory, Platform, ProcessInfo;
 import 'dart:ui' show AppExitResponse;
@@ -148,6 +149,9 @@ void _registerTvosPlatformPlugins() {
   // SupporterService reaches only in SUPPORTER_MODE=iap builds.
 }
 
+@pragma('vm:entry-point')
+Future<void> vexBackgroundRefill() => VexBackgroundRefill.runHeadless();
+
 void main() {
   final binding = PlezyWidgetsBinding.ensureInitialized();
   if (agentControlEnabled) AgentControlService.instance.register();
@@ -275,6 +279,7 @@ Future<void> _optionalGatePhase(
 }
 
 Future<_StartupDependencies> _initializeApplication() async {
+  await VexBackgroundRefill.awaitHeadless();
   final settings = await _gatePhase(StartupPhase.preferences, SettingsService.getInstance);
   setLoggerLevel(settings.read(SettingsService.enableDebugLogging));
 
@@ -1824,6 +1829,13 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
           update: (context, activeProfile, previous) {
             final provider = previous!;
             provider.setActiveProfileId(activeProfile.activeId);
+            VexBackgroundRefill.attach(
+              provider,
+              _serverManager,
+              widget.settings,
+              activeGlobalKey: () => VideoPlayerScreenState.activeGlobalKey,
+              waitForQueueHandoff: _downloadManager.waitForQueueHandoff,
+            );
             return provider;
           },
         ),

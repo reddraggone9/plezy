@@ -1,6 +1,8 @@
 package com.edde746.plezy.vex
 
 import android.app.Activity
+import android.content.Context
+import android.hardware.display.DisplayManager
 import android.media.MediaCodecInfo
 import android.media.MediaCodecList
 import android.os.Build
@@ -26,7 +28,7 @@ internal object DecoderLimits {
     "mpeg4" to "video/mp4v-es"
   )
 
-  fun probe(activity: Activity): Map<String, Any> {
+  fun probe(context: Context): Map<String, Any> {
     val codecs = HashMap<String, Any>()
     val infos = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
     for ((codec, mime) in MIME_TYPES) {
@@ -37,7 +39,7 @@ internal object DecoderLimits {
         .maxByOrNull { (it["maxWidth"] as Int) * (it["maxHeight"] as Int) }
       if (limits != null) codecs[codec] = limits
     }
-    return mapOf("codecs" to codecs, "display" to displayInfo(activity))
+    return mapOf("codecs" to codecs, "display" to displayInfo(context))
   }
 
   private fun limitsFor(info: MediaCodecInfo, type: String): Map<String, Any>? {
@@ -73,8 +75,9 @@ internal object DecoderLimits {
   }
 
   @Suppress("DEPRECATION")
-  private fun displayInfo(activity: Activity): Map<String, Any> {
-    val display: Display? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) activity.display else activity.windowManager.defaultDisplay
+  private fun displayInfo(context: Context): Map<String, Any> {
+    val display: Display? = if (context is Activity && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) context.display
+      else context.getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)
     var longSide = 0
     var shortSide = 0
     val hdr = ArrayList<String>()
