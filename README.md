@@ -13,6 +13,7 @@
 > - **Screen-size cap.** Transcodes never exceed the display resolution.
 > - **Device-compatible downloads.** A file the hardware can't play downloads as a 1080p-capped MP4 transcode (about 8 Mbps), including through Keep Synced rules. Files it can play still download as originals. A transcoded download can't resume, so a dropped connection restarts it (on a LAN it takes about 7 minutes per hour of video). You can turn this off under Settings → Downloads.
 > - Transcoded downloads run as a foreground download, so Android's 9-minute background limit doesn't restart them. This uses a small patch to `background_downloader`: [reddraggone9/background_downloader@vex/foreground](https://github.com/reddraggone9/background_downloader/tree/vex/foreground). They follow the existing "Download on Wi-Fi only" setting like every other download.
+> - **Background Keep Synced refill.** Android checks enabled rules about every six hours without opening the app, using the last active profile and upstream's existing "Download on Wi-Fi only" policy. Android may delay the check for low battery or no network; force-stopping the app disables background work until it is opened again. No extra setting.
 > - **Retry as transcode.** If a direct play still fails to decode, it reopens once as a server transcode at the same position.
 > - Installs alongside stock Plezy (`com.edde746.plezy.vex`, "Plezy Vex"), and has its own signing key.
 >

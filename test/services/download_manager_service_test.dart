@@ -1532,6 +1532,43 @@ void main() {
       expect(row.videoFilePath, isNot('${task.directory}/${task.filename}'));
     });
 
+    test('headless queue handoff waits for a native drain, not just the enqueue request', () async {
+      final fixture = await _createSupplementaryFixture();
+      await fixture.db.insertDownload(
+        serverId: ServerId('srv'),
+        ratingKey: fixture.metadata.id,
+        globalKey: fixture.metadata.globalKey,
+        type: 'movie',
+        status: DownloadStatus.queued.index,
+      );
+      await fixture.db.addToQueue(mediaGlobalKey: fixture.metadata.globalKey);
+      final initialized = Completer<void>();
+      final client = _SupplementaryClient(
+        metadata: fixture.metadata,
+        resolution: () =>
+            throw MediaServerHttpException(type: MediaServerHttpErrorType.unknown, statusCode: 401, message: 'denied'),
+      );
+      final manager = DownloadManagerService(
+        database: fixture.db,
+        storageService: fixture.storage,
+        clientResolver: (serverId, {clientScopeId}) => client,
+        downloadsSupportedOverride: true,
+        fileDownloaderInitializerOverride: () => initialized.future,
+      );
+      addTearDown(manager.dispose);
+      await manager.waitForQueueHandoff(); // Idle is already settled.
+      final drain = manager.handoffQueuedDownloads(client);
+      var settled = false;
+      final handoff = manager.waitForQueueHandoff().then((_) => settled = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(settled, isFalse);
+      initialized.complete();
+      await Future.wait([drain, handoff]);
+      expect(settled, isTrue);
+      expect(await fixture.db.select(fixture.db.downloadQueue).get(), isEmpty);
+      expect((await fixture.db.getDownloadedMedia(fixture.metadata.globalKey))?.status, DownloadStatus.failed.index);
+    });
+
     test('queue drain skips an unresolvable head and still reaches the next item', () async {
       final fixture = await _createSupplementaryFixture();
       // Stale head: highest priority, but its server has no resolvable client.
