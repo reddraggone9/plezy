@@ -179,6 +179,12 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
   /// Ensures persisted downloads have been loaded from disk.
   Future<void> ensureInitialized() => _initFuture;
 
+  /// Also settle the active profile's rule/ownership reload (headless startup).
+  Future<void> ensureProfileInitialized() async {
+    await _initFuture;
+    await _profileScopedReloadFuture;
+  }
+
   Future<void> setDownloadLocation({required String path, required String pathType, void Function()? checkCurrent}) {
     return _downloadManager.setDownloadLocation(path: path, pathType: pathType, checkCurrent: checkCurrent);
   }
@@ -439,14 +445,19 @@ class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin
       final pinned = await _downloadManager.getAllPinnedMetadata(activeProfileId: _activeProfileId);
 
       for (final item in downloads) {
-        _downloads[item.globalKey] = DownloadProgress(
-          globalKey: item.globalKey,
-          status: DownloadStatus.values[item.status],
-          progress: item.progress,
-          downloadedBytes: item.downloadedBytes,
-          totalBytes: item.totalBytes ?? 0,
-          errorMessage: item.errorMessage,
-          downloadedAt: item.downloadedAt,
+        // Native completion replay can arrive while the snapshot's metadata
+        // is loading. Never overwrite that newer event with an older DB row.
+        _downloads.putIfAbsent(
+          item.globalKey,
+          () => DownloadProgress(
+            globalKey: item.globalKey,
+            status: DownloadStatus.values[item.status],
+            progress: item.progress,
+            downloadedBytes: item.downloadedBytes,
+            totalBytes: item.totalBytes ?? 0,
+            errorMessage: item.errorMessage,
+            downloadedAt: item.downloadedAt,
+          ),
         );
 
         _artworkPaths[item.globalKey] = DownloadedArtwork(thumbPath: item.thumbPath);
