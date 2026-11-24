@@ -82,6 +82,7 @@ abstract final class VexBackgroundRefill {
     }
     final queued = await provider.executeSyncRules(servers, force: true);
     appLogger.i('Vex background refill: ${queued.join(', ')}');
+    await provider.vexRefreshDownloadedSubtitles(settings, skipGlobalKey: activeGlobalKey);
   }
 
   static Future<void> runHeadless() async {
@@ -119,7 +120,12 @@ abstract final class VexBackgroundRefill {
       await active.initialize();
       // Don't connect servers (or refresh credentials) when there is no work.
       final profileId = active.activeId;
-      if (profileId == null || !(await database.getSyncRules(profileId: profileId)).any((r) => r.enabled)) {
+      final hasRules =
+          profileId != null && (await database.getSyncRules(profileId: profileId)).any((r) => r.enabled);
+      final subtitlesDue =
+          VexDownloadSubtitleRefresh.due(settings) &&
+          (await (database.select(database.downloadedMedia)..limit(1)).get()).isNotEmpty;
+      if (profileId == null || (!hasRules && !subtitlesDue)) {
         success = true;
         return;
       }
@@ -145,7 +151,11 @@ abstract final class VexBackgroundRefill {
       );
       manager.recoveryFuture = manager.recoverInterruptedDownloads();
       downloads = DownloadProvider(downloadManager: manager, database: database)..setActiveProfileId(profileId);
-      await refill(downloads, servers, settings);
+      if (hasRules) {
+        await refill(downloads, servers, settings);
+      } else {
+        await manager.vexRefreshDownloadedSubtitles(settings);
+      }
       // queueDownload starts a non-blocking drain. Don't destroy its engine
       // until every prepared video has been handed to background_downloader.
       for (final client in servers.onlineClients.values.take(1)) {

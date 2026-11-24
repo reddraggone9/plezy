@@ -17,6 +17,7 @@ import '../database/download_collection_operations.dart';
 import '../database/download_operations.dart';
 import '../services/background_work_diagnostics_service.dart';
 import '../services/download_manager_service.dart';
+import '../services/settings_service.dart'; // Vex fork
 import '../services/api_cache.dart';
 import '../services/download_artwork_service.dart';
 import '../services/download_storage_service.dart';
@@ -68,6 +69,8 @@ typedef _MetadataHydrationResult = ({MediaItem? metadata, bool networkFilled, bo
 class DownloadProvider extends ChangeNotifier with DisposableChangeNotifierMixin {
   int _batchDeletionDepth = 0;
   final DownloadManagerService _downloadManager;
+  Future<int> vexRefreshDownloadedSubtitles(SettingsService settings, {String? skipGlobalKey}) => // Vex fork
+      _downloadManager.vexRefreshDownloadedSubtitles(settings, skipGlobalKey: skipGlobalKey);
   final AppDatabase _database;
   final SyncRuleExecutor _syncRuleExecutor;
   StreamSubscription<DownloadProgress>? _progressSubscription;

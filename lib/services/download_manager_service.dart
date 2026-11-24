@@ -19,6 +19,7 @@ import '../media/media_item_types.dart';
 import '../media/media_kind.dart';
 import '../media/media_server_client.dart';
 import 'api_cache.dart';
+import 'cached_playback_metadata_service.dart';
 import 'connectivity_probe.dart';
 import 'download_artwork_helpers.dart';
 import 'download_artwork_service.dart';
@@ -40,6 +41,8 @@ import '../utils/global_key_utils.dart';
 import '../utils/error_message_utils.dart';
 import '../utils/storage_failure.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+
+part '../vex/download_subtitle_refresh.dart'; // Vex fork
 
 typedef MediaClientResolver = MediaServerClient? Function(ServerId serverId, {String? clientScopeId});
 typedef _NativeTaskForId = Future<Task?> Function(String taskId);

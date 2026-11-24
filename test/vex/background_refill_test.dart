@@ -45,6 +45,13 @@ class _Downloads extends ChangeNotifier implements DownloadProvider {
   }
 
   @override
+  Future<int> vexRefreshDownloadedSubtitles(SettingsService settings, {String? skipGlobalKey}) async {
+    expect(skipGlobalKey, protectedKey);
+    calls.add('subtitles');
+    return 0;
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -68,7 +75,7 @@ void main() {
         addTearDown(servers.dispose);
         await VexBackgroundRefill.refill(downloads, servers, settings, activeGlobalKey: 'playing');
         final blocked = wifiOnly && link == ConnectivityResult.mobile;
-        expect(downloads.calls, blocked ? isEmpty : ['profile', 'metadata', 'delete', 'sync']);
+        expect(downloads.calls, blocked ? isEmpty : ['profile', 'metadata', 'delete', 'sync', 'subtitles']);
         if (!blocked) expect(downloads.protectedKey, 'playing');
       });
     }
@@ -88,6 +95,6 @@ void main() {
     expect(downloads.calls, ['profile']);
     downloads.gate!.complete();
     await Future.wait([first, second]);
-    expect(downloads.calls, ['profile', 'metadata', 'sync']);
+    expect(downloads.calls, ['profile', 'metadata', 'sync', 'subtitles']);
   });
 }

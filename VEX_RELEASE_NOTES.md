@@ -10,4 +10,7 @@ New in 2.25.0-vex.5:
 - Fix a first-open recovery race that could show an already-completed background download as queued.
 - Downloads are handed to the existing native downloader, so the app does not have to remain open. Android's battery/network scheduling and force-stop behavior still apply.
 
+New in 2.26.0-vex.3:
+- Finished Jellyfin downloads pick up subtitles added on the server after they were downloaded (for example by Bazarr), and offline playback uses the server's current default audio and subtitle tracks. Checked about once a day with the background refill, on the same network policy; no need to download anything again.
+
 Install `plezy-vex-*-arm64-v8a.apk` (Fire HD 10, most phones) or via Obtainium. Installs alongside stock Plezy.
