@@ -105,8 +105,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "22ee800435e29d2a359518208059ac9cd7a4a19f"
-      resolved-ref: "22ee800435e29d2a359518208059ac9cd7a4a19f"
+      ref: f181c21d02d29773e984603d860edfbf65fb9e5c
+      resolved-ref: f181c21d02d29773e984603d860edfbf65fb9e5c
       url: "https://github.com/reddraggone9/background_downloader"
     source: git
     version: "9.6.2"

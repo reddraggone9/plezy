@@ -184,6 +184,11 @@ mixin _JellyfinImageDownloadMethods on _JellyfinClientInternals {
       appLogger.i('Vex: downloading $itemId as a device-compatible transcode');
       return _withApiKey(url);
     } catch (error, stackTrace) {
+      // A server or network that didn't answer says nothing about the device: retry
+      // the download later rather than fetch an original the device may not play
+      // (an Android 17 app in the background has no network outside a job).
+      final failure = MediaServerHttpException.from(error);
+      if (failure.isTransient || failure.isCancellation || (failure.statusCode ?? 0) >= 500) throw failure;
       appLogger.w(
         'Vex: device-compatible download negotiation failed; downloading the original',
         error: error,

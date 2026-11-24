@@ -41,6 +41,7 @@ import '../utils/global_key_utils.dart';
 import '../utils/error_message_utils.dart';
 import '../utils/storage_failure.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import '../vex/transcode_check.dart'; // Vex fork
 
 part '../vex/download_subtitle_refresh.dart'; // Vex fork
 
@@ -2901,6 +2902,7 @@ class DownloadManagerService {
     // events are never dropped as part of this one.
     int? nextPart;
     _DownloadContext? nextPartContext;
+    var vexEndedEarly = false; // Vex fork
     try {
       // Fresh DB check — bail if already completed (guards against race with orphan scan)
       final existingCheck = await _downloadForCurrentTaskSession(
@@ -3012,6 +3014,20 @@ class DownloadManagerService {
         }
       }
 
+      // Vex fork: a transcode the server ended early is retried, never recorded.
+      if (!task.allowPause &&
+          task is DownloadTask &&
+          task is! UriDownloadTask &&
+          await VexTranscodeCheck.endedEarly(
+            task,
+            await task.filePath(),
+            () async => ctx?.metadata ?? await _resolveMetadata(globalKey),
+          )) {
+        await _deleteFileIfExists(File(await task.filePath()), 'transcode that ended early');
+        vexEndedEarly = true;
+        return;
+      }
+
       // The completion time is stamped when the last file lands.
       final partCount = existingCheck.partCount;
       if (partIndex == null || partIndex == 0) {
@@ -3115,6 +3131,7 @@ class DownloadManagerService {
       await _database.removeFromQueue(globalKey);
     } finally {
       _completingKeys.remove(globalKey);
+      if (vexEndedEarly) await _onDownloadFailed(globalKey, task.taskId, TaskException('Transcode ended early'));
       final part = nextPart;
       if (part != null) await _continueStackedDownload(globalKey, part, nextPartContext);
       // Always advance the queue, even after errors

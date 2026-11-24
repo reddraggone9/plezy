@@ -13,4 +13,9 @@ New in 2.25.0-vex.5:
 New in 2.26.0-vex.3:
 - Finished Jellyfin downloads pick up subtitles added on the server after they were downloaded (for example by Bazarr), and offline playback uses the server's current default audio and subtitle tracks. Checked about once a day with the background refill, on the same network policy; no need to download anything again.
 
+New in 2.26.0-vex.4:
+- Transcoded downloads that start while the app is in the background (Keep Synced refills, or the next download in a queue) no longer fail and hand their place to the next episode. Android 12+ doesn't let a background app start a foreground download, so such a download now runs as ordinary background work: if Android stops it, it starts over later on its own, and it moves to the foreground as soon as the app is opened. Setting Plezy Vex's battery usage to "Unrestricted" lets background downloads run in the foreground from the start.
+- A transcode the server ended early is no longer saved as a finished download: its length is checked against the episode or movie, and it downloads again.
+- A "Downloading…" notification no longer stays behind when nothing is downloading.
+
 Install `plezy-vex-*-arm64-v8a.apk` (Fire HD 10, most phones) or via Obtainium. Installs alongside stock Plezy.

@@ -78,7 +78,7 @@ dependencies:
     git:
       # Vex fork: upstream's pin + foreground non-resumable (transcoded) downloads (vex/foreground).
       url: https://github.com/reddraggone9/background_downloader
-      ref: 22ee800435e29d2a359518208059ac9cd7a4a19f
+      ref: f181c21d02d29773e984603d860edfbf65fb9e5c
   sentry_flutter: ^9.30.0
   auto_updater:
     git:

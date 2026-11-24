@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:plezy/exceptions/media_server_exceptions.dart';
 import 'package:plezy/media/media_backend.dart';
 import 'package:plezy/media/media_kind.dart';
 import 'package:plezy/services/jellyfin_client.dart';
@@ -27,6 +29,7 @@ const _fire = VexDeviceLimits(
 ({JellyfinClient client, List<http.Request> playbackInfo}) _server({
   required bool directPlay,
   String transcodingUrl = '/videos/item-1/master.m3u8?MediaSourceId=src-1&PlaySessionId=ps-transcode',
+  Future<http.Response> Function()? playbackInfoFailure,
 }) {
   final playbackInfo = <http.Request>[];
   final client = JellyfinClient.forTesting(
@@ -56,6 +59,7 @@ const _fire = VexDeviceLimits(
       }
       if (request.url.path == '/Items/item-1/PlaybackInfo') {
         playbackInfo.add(request);
+        if (playbackInfoFailure != null) return playbackInfoFailure();
         return jsonResponse({
           'PlaySessionId': 'ps',
           'MediaSources': [
@@ -158,6 +162,34 @@ void main() {
       expect(profiles.single, containsPair('Protocol', 'http'));
       // The embedded text subtitle the MP4 drops is fetched as a file.
       expect(resolution.externalSubtitles.map((s) => s.id), [2]);
+    });
+
+    test('a server that cannot be reached fails the download for a retry, not an original', () async {
+      final server = _server(
+        directPlay: false,
+        transcodingUrl: mp4,
+        playbackInfoFailure: () async => throw const SocketException('Software caused connection abort'),
+      );
+      addTearDown(server.client.close);
+
+      await expectLater(
+        server.client.resolveDownload(movie),
+        throwsA(isA<MediaServerHttpException>().having((e) => e.isTransient, 'isTransient', isTrue)),
+      );
+    });
+
+    test('a negotiation the server rejects still downloads the original', () async {
+      final server = _server(
+        directPlay: false,
+        transcodingUrl: mp4,
+        playbackInfoFailure: () async => http.Response('{}', 400),
+      );
+      addTearDown(server.client.close);
+
+      final resolution = await server.client.resolveDownload(movie);
+
+      expect(resolution.vexTranscoded, isFalse);
+      expect(Uri.parse(resolution.videoUrl!).path, '/Videos/item-1/stream');
     });
 
     test('a playable source downloads the original', () async {
